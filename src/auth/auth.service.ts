@@ -25,7 +25,7 @@ export class AuthService {
     const { username, password } = authCredentialsDto;
 
     // hash password
-    const salt = await bcrypt.getSalt();
+    const salt = await bcrypt.genSalt();
     const hashPassword = await bcrypt.hash(password, salt);
 
     const user = this.userRepository.create({
@@ -45,7 +45,7 @@ export class AuthService {
 
   async signIn(
     authCredentialsDto: AuthCredentialsDto,
-  ): Promise<{ accessToken: string }> {
+  ): Promise<{ data: { accessToken: string; user: User } }> {
     const { username, password } = authCredentialsDto;
 
     const user = await this.userRepository.findOne({ where: { username } });
@@ -53,7 +53,13 @@ export class AuthService {
     if (user && (await bcrypt.compare(password, user.password))) {
       const payload: IJwtPayload = { username };
       const accessToken = await this.jwtService.sign(payload);
-      return { accessToken };
+
+      const userData: User = {
+        id: user.id,
+        username: user.username,
+        password: undefined,
+      };
+      return { data: { accessToken, user: userData } };
     } else {
       throw new UnauthorizedException('User Not Authorized');
     }
